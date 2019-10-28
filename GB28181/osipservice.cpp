@@ -296,12 +296,13 @@ static void *MsgProcess(gb28181Params *p28181Params, void * pvSClientGB)
 		eXosip_event_t *je = NULL;
 		//处理事件
 		je = eXosip_event_wait(peCtx, 0, 4);
+		printf("等待摄像机信息:%d\n",je);
 		if (je == NULL)
 		{
 			osip_usleep(100000);
 			continue;
 		}
-
+		printf("摄像机信息来了:%d , %s\n",je->type,je->textinfo);
 		switch (je->type)
 		{
 			case EXOSIP_MESSAGE_NEW:				//新消息到来
@@ -325,6 +326,7 @@ static void *MsgProcess(gb28181Params *p28181Params, void * pvSClientGB)
 							if (keepAliveFlag == 0)
 							{
 								fprintf(g_fp, "msg body:%s\n", body->body);
+								printf("msg body:%s\n", body->body);
 								keepAliveFlag = 1;
 								g_liveVideoParams.gb28181Param.registerOk = 1;
 							}
@@ -901,7 +903,9 @@ static unsigned __stdcall rtp_recv_thread(void *arg)
 		return NULL;
 	}
 
-	APP_DEBUG("%s:%d starting ...", p->sipId, p->recvPort);
+	printf("===============rtp_recv_thread %s:%d starting ...\n", p->sipId, p->recvPort);
+	//APP_DEBUG("%s:%d starting ...", p->sipId, p->recvPort);
+
 
 	int cnt = 0;
 	int rtpPsLen, h264length, psLen = 0;
@@ -923,6 +927,7 @@ static unsigned __stdcall rtp_recv_thread(void *arg)
 
 			//写入文件
 			fprintf(g_fp, "符合要求的数据---------------------%x,,%x,,%x,,%x\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+			//printf("符合要求的数据---------------------%x,,%x,,%x,,%x\n", buffer[0], buffer[1], buffer[2], buffer[3]);//w-
 			ptr = psBuf + psLen;			//最新数据的头
 			rtpPsLen = recvLen - rtpHeadLen;
 #if 1
@@ -1064,6 +1069,7 @@ static unsigned __stdcall stream_keep_alive_thread(void *arg)
 //开始接收视频流
 static int startStreamRecv(liveVideoStreamParams *pliveVideoParams)
 {
+	printf("=====================startStreamRecv\n");
 	int i;
 	HANDLE hHandle;
 	HANDLE hHandleAlive;
@@ -1118,6 +1124,7 @@ static unsigned __stdcall gb28181ServerThread(void *arg)
 
 	//打开一个UDP socket 接收信号
 	iReturnCode = eXosip_listen_addr(eCtx, IPPROTO_UDP, NULL, p28181Params->localSipPort, AF_INET, 0);
+	printf("打开一个UDP socket 接收信号:iReturnCode:%d,localSipPort:%d\n",iReturnCode, p28181Params->localSipPort);
 	if (iReturnCode != OSIP_SUCCESS)
 	{
 		printf("eXosip_listen_addr error!");
@@ -1154,6 +1161,7 @@ static int sendInvitePlay(char *playSipId, int rtp_recv_port, gb28181Params *p28
 	if (ret != 0)
 	{
 		fprintf(g_fp, "eXosip_call_build_initial_invite failed, %s,%s,%s", dest_call, source_call, subject);
+		printf("eXosip_call_build_initial_invite failed, %s,%s,%s", dest_call, source_call, subject);
 		return -1;
 	}
 
@@ -1306,6 +1314,7 @@ static int stopCameraRealStream(liveVideoStreamParams *pliveVideoParams)
 //验证相机状态
 static int checkCameraStatus(liveVideoStreamParams *pliveVideoParams)
 {
+	printf("--------------checkCameraStatus:count:%d,err count:%d\n", pliveVideoParams->cameraNum, pliveVideoParams->pCameraParams->statusErrCnt);
 	int i;
 	CameraParams *p;
 	gb28181Params *p28181Params = &(pliveVideoParams->gb28181Param);
@@ -1318,7 +1327,8 @@ static int checkCameraStatus(liveVideoStreamParams *pliveVideoParams)
 			p->statusErrCnt++;
 			if (p->statusErrCnt % 10 == 0)
 			{
-				APP_WARRING("camera %s is exception, restart it", p->sipId);
+				//APP_WARRING("camera %s is exception, restart it", p->sipId);
+				printf("camera %s is exception, restart it\n", p->sipId);
 				p28181Params->call_id = -1;
 				sendInvitePlay(p->sipId, p->recvPort, p28181Params);
 				p->statusErrCnt = 0;
@@ -1358,6 +1368,7 @@ const char *whitespace_cb(mxml_node_t *node, int where)
 //发送请求catalog信息
 static int sendQueryCatalog(gb28181Params *p28181Params)
 {
+	printf("=====================sendQueryCatalog\n");
 	char sn[32];
 	int ret;
 	mxml_node_t *tree, *query, *node;
@@ -1388,13 +1399,19 @@ static int sendQueryCatalog(gb28181Params *p28181Params)
 			ret = eXosip_message_build_request(peCtx, &message, "MESSAGE", dest_call, source_call, NULL);
 			if (ret == 0 && message != NULL)
 			{
+				printf("=====================sendQueryCatalog 1\n");
+
 				osip_message_set_body(message, buf, strlen(buf));
 				osip_message_set_content_type(message, "Application/MANSCDP+xml");
 				eXosip_lock(peCtx);
 				eXosip_message_send_request(peCtx, message);
 				eXosip_unlock(peCtx);
-				APP_DEBUG("xml:%s, dest_call:%s, source_call:%s, ok", buf, dest_call, source_call);
-				fprintf(g_fp, "xml:%s, dest_call:%s, source_call:%s, ok", buf, dest_call, source_call);
+				printf("=====================sendQueryCatalog 2\n");
+				//APP_DEBUG("xml:%s, dest_call:%s, source_call:%s, ok", buf, dest_call, source_call);
+				printf("=====================sendQueryCatalog 3\n");
+				fprintf(g_fp, "xml:%s, dest_call:%s, source_call:%s, ok", buf, dest_call, source_call);//w-
+				printf("xml:%s, dest_call:%s, source_call:%s, ok\n", buf, dest_call, source_call);
+				printf("message:%s, ok\n", message);
 			}
 			else
 			{
@@ -1430,7 +1447,7 @@ int main(int argc, char *argv[])
 	if (g_fp == NULL)
 		return 0;
 
-
+	
 	//1.解析配置文件获取相机相关配置
 	ParserIniFile();
 
@@ -1448,7 +1465,7 @@ int main(int argc, char *argv[])
 		CloseHandle(hHandle);
 	}
 
-	int tmpCnt = 20;
+	int tmpCnt = 2000;
 	while ((!g_liveVideoParams.gb28181Param.registerOk) && (tmpCnt > 0))
 	{
 		printf("waiting register %d...\n", tmpCnt);
@@ -1457,22 +1474,37 @@ int main(int argc, char *argv[])
 		if (tmpCnt == 0)
 			exit(-1);
 	}
-
+	printf("g_liveVideoParams.gb28181Param.registerOk: %d\n", g_liveVideoParams.gb28181Param.registerOk);
 	//发送请求catalog消息
 	sendQueryCatalog(&(g_liveVideoParams.gb28181Param));
+	printf("Catalog发送请求完成 platformSipId:%s\n", g_liveVideoParams.gb28181Param.platformSipId);
+	printf("Catalog发送请求完成 platformIpAddr:%s\n", g_liveVideoParams.gb28181Param.platformIpAddr);
+	printf("Catalog发送请求完成 platformSipPort:%d\n", g_liveVideoParams.gb28181Param.platformSipPort);
+	printf("Catalog发送请求完成 localSipId:%s\n", g_liveVideoParams.gb28181Param.localSipId);
+	printf("Catalog发送请求完成 localIpAddr:%s\n", g_liveVideoParams.gb28181Param.localIpAddr);
+	printf("Catalog发送请求完成 localSipPort:%d\n", g_liveVideoParams.gb28181Param.localSipPort);
+	printf("Catalog发送请求完成 SN:%d\n", g_liveVideoParams.gb28181Param.SN);
+	///////
+	printf("Catalog发送请求完成 call_id:%d\n", g_liveVideoParams.gb28181Param.call_id);
+	printf("Catalog发送请求完成 dialog_id:%d\n", g_liveVideoParams.gb28181Param.dialog_id);
+	printf("Catalog发送请求完成 registerOk:%d\n", g_liveVideoParams.gb28181Param.registerOk);
+	printf("Catalog发送请求完成 running:%d\n", g_liveVideoParams.gb28181Param.running);
 
 	//接收视频流
 	startStreamRecv(&g_liveVideoParams);
+	printf("startStreamRecv end %d\n", g_liveVideoParams.gb28181Param.running);
 	Sleep(1000);
 
 	int i = 0;
 
 	//发送请求视频消息
 	startCameraRealStream(&g_liveVideoParams);
+	printf("startCameraRealStream end %d\n", g_liveVideoParams.gb28181Param.running);
 	while (g_liveVideoParams.running)
 	{
 		i++;
-		checkCameraStatus(&g_liveVideoParams);
+		int nRet=checkCameraStatus(&g_liveVideoParams);
+		printf("==============checkCameraStatus:%d %d \n",nRet,g_liveVideoParams.stream_input_type);
 		Sleep(2000);
 		if (i == 20)
 			break;
@@ -1480,6 +1512,7 @@ int main(int argc, char *argv[])
 
 	g_liveVideoParams.running = 0;
 	stopCameraRealStream(&g_liveVideoParams);
+	printf("==============stopCameraRealStream end:%d\n", g_liveVideoParams.running);
 	Sleep(300);
 	stopStreamRecv(&g_liveVideoParams);
 	g_liveVideoParams.gb28181Param.running = 0;
