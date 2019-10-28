@@ -5,7 +5,7 @@
 目前只支持H264裸流，后续会加上其他流格式的推流和直播  
 三、配置  
 1、相机配置（目前以海康为例）  
-![image](x64/Release/haikangconfig.PNG)  
+![image](https://github.com/wanghonggao007/GB28181/blob/master/x64/Release/haikangconfig.PNG)  
 2、服务端配置  
 四、程序架构图  
 五、打赏  
