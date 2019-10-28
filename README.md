@@ -29,5 +29,5 @@ UserName=账号
 UserPwd= 密码  
 四、程序架构图  
 五、打赏  
-如果您绝对这次修改和完善对您有帮助，不妨打赏一下  
+如果您觉得这次修改和完善对您有帮助，不妨打赏一下  
 ![image](http://osijiy9i7.bkt.clouddn.com/%E6%94%AF%E4%BB%98.PNG)
